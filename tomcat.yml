@@ -2,6 +2,9 @@
 - hosts: localhost
   become: yes
   become_method: sudo
+  vars:
+    tomcat_port: 8080
+
   tasks:
     
   - name: Make sure that we can connect to the machine
@@ -30,7 +33,7 @@
     file: path=/opt/apache-tomcat-9.0.11/ owner=tomcat group=tomcat state=directory recurse=yes
 
   - name: Configure Tomcat server
-    template: src=templates/server.xml  dest=/opt/apache-tomcat-9.0.11/conf
+    template: src=templates/server.xml.j2  dest=/opt/apache-tomcat-9.0.11/conf/server.xml
     notify: restart tomcat
 
   - name: Configure Tomcat users
