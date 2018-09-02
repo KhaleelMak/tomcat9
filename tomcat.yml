@@ -4,9 +4,6 @@
   become_method: sudo
   vars:
     tomcat_port: 8080
-    tomcat_users:
-      - { rolename: manager-gui, username: tomcatmgr, password: admin123 }
-      - { rolename: manager-script, username: deploy, password: deploy123 }
 
   tasks:
     
@@ -50,6 +47,9 @@
   - name: Context configure
     template: src=templates/context.xml.manager dest=/opt/apache-tomcat-9.0.11/webapps/manager/META-INF/context.xml
     notify: restart tomcat
+
+  - name: open tomcat port
+    firewalld: port=8080/tcp zone=public permanent=true state=enabled immediate=yes
 
   - name: Start Tomcat
     service: 
