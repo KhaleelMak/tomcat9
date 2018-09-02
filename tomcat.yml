@@ -1,0 +1,58 @@
+---
+- hosts: localhost
+  become: yes
+  become_method: sudo
+  tasks:
+    
+  - name: Make sure that we can connect to the machine
+    ping:
+
+  - name: Install Java 1.8
+    yum: name=java-1.8.0-openjdk state=present
+
+  - name: add group "tomcat"
+    group: name=tomcat
+
+  - name: add user "tomcat"
+    user: name=tomcat group=tomcat createhome=yes
+    become: true
+
+  - name: copy Tomcat
+    get_url: url=http://www-eu.apache.org/dist/tomcat/tomcat-9/v9.0.11/bin/apache-tomcat-9.0.11.tar.gz  dest=/opt/apache-tomcat-9.0.11.tar.gz
+
+  - name: copy target
+    template: src=files/tomcat.service  dest=/etc/systemd/system/tomcat.service mode=644 
+
+  - name: Extract Tomcat archive
+    command: tar zxvf /opt/apache-tomcat-9.0.11.tar.gz -C /opt creates=/opt/apache-tomcat-9.0.11
+   
+  - name: Change ownership of Tomcat installation
+    file: path=/opt/apache-tomcat-9.0.11/ owner=tomcat group=tomcat state=directory recurse=yes
+
+  - name: Configure Tomcat server
+    template: src=templates/server.xml  dest=/opt/apache-tomcat-9.0.11/conf
+    notify: restart tomcat
+
+  - name: Configure Tomcat users
+    template: src=templates/tomcat-users.xml dest=/opt/apache-tomcat-9.0.11/conf
+    notify: restart tomcat
+
+  - name: Context configure
+    template: src=templates/context.xml.host  dest=/opt/apache-tomcat-9.0.11/webapps/host-manager/META-INF
+    notify: restart tomcat
+
+  - name: Context configure
+    template: src=templates/context.xml.manager dest=/opt/apache-tomcat-9.0.11/webapps/manager/META-INF/context.xml
+    notify: restart tomcat
+
+  - name: Start Tomcat
+    service: 
+      name: tomcat
+      state: started
+  
+  handlers: 
+  - name: restart tomcat
+    service: 
+      name: tomcat
+      state: restarted
+    
