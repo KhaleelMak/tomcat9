@@ -4,6 +4,9 @@
   become_method: sudo
   vars:
     tomcat_port: 8080
+    domains:
+      - { domain_name: abc.com }
+      - { domain_name: xyz.com }
 
   tasks:
     
@@ -50,6 +53,11 @@
 
   - name: open tomcat port
     firewalld: port=8080/tcp zone=public permanent=true state=enabled immediate=yes
+
+  - name: create necessary logs
+    file: path=/opt/apache-tomcat-9.0.11/logs/{{item.domain_name}}_access_log.txt state=touch owner=tomcat group=tomcat mode=755
+    with_items: 
+      - "{{ domains }}"
 
   - name: Start Tomcat
     service: 
