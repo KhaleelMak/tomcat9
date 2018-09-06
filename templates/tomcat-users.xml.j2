@@ -3,8 +3,8 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
               version="1.0">
-{% for row in tomcat_users %}
-              <role rolename="{{row.rolename}}" />
-              <user username="{{row.username}}" password="{{row.password}}" roles="{{row.rolename}}" />
+{% for user in tomcat_users %}
+              <role rolename="{{user.role}}" />
+              <user username="{{user.name}}" password="{{user.pass}}" roles="{{user.role}}" />
 {% endfor %}
 </tomcat-users>
