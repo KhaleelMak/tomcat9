@@ -3,7 +3,10 @@
   become: yes
   become_method: sudo
   vars:
+    tomcat_base: /opt/apache-tomcat-9.0.11
     tomcat_port: 8080
+    tomcat_ssl_port: 8443
+
     domains:
       - { domain_name: abc.com }
       - { domain_name: xyz.com }
@@ -13,7 +16,7 @@
   - name: Make sure that we can connect to the machine
     ping:
 
-  - name: Install Java 1.8
+  - name: Install java-1.8.0-openjdk
     yum: name=java-1.8.0-openjdk state=present
 
   - name: add group "tomcat"
@@ -23,39 +26,45 @@
     user: name=tomcat group=tomcat createhome=yes
     become: true
 
-  - name: copy Tomcat
-    get_url: url=http://www-eu.apache.org/dist/tomcat/tomcat-9/v9.0.11/bin/apache-tomcat-9.0.11.tar.gz  dest=/opt/apache-tomcat-9.0.11.tar.gz
+  - name: Download tomcat tar to /tmp dir
+    get_url: url=http://www-eu.apache.org/dist/tomcat/tomcat-9/v9.0.11/bin/apache-tomcat-9.0.11.tar.gz  dest=/tmp/apache-tomcat-9.0.11.tar.gz
 
-  - name: copy target
+  - name: setup systemd file for tomcat service
     template: src=files/tomcat.service  dest=/etc/systemd/system/tomcat.service mode=644 
 
-  - name: Extract Tomcat archive
-    command: tar zxvf /opt/apache-tomcat-9.0.11.tar.gz -C /opt creates=/opt/apache-tomcat-9.0.11
+  - name: Extract tomcat to target directory
+    command: tar zxvf /tmp/apache-tomcat-9.0.11.tar.gz -C /opt creates={{tomcat_base}}
    
-  - name: Change ownership of Tomcat installation
-    file: path=/opt/apache-tomcat-9.0.11/ owner=tomcat group=tomcat state=directory recurse=yes
+  - name: set correct ownership for tomcat installation directory
+    file: path={{tomcat_base}} owner=tomcat group=tomcat state=directory recurse=yes
 
-  - name: Configure Tomcat server
-    template: src=templates/server.xml.j2  dest=/opt/apache-tomcat-9.0.11/conf/server.xml
+  - name: Configure Tomcat server Configuration
+    template: src=templates/server.xml.j2  dest={{tomcat_base}}/conf/server.xml
     notify: restart tomcat
+
+  - name: Configure Keytore configuration
+    copy: src=files/crashmeal.com.jks dest={{tomcat_base}}/conf/crashmeal.com.jks owner=tomcat group=tomcat 
 
   - name: Configure Tomcat users
-    template: src=templates/tomcat-users.xml.j2 dest=/opt/apache-tomcat-9.0.11/conf/tomcat-users.xml
+    template: src=templates/tomcat-users.xml.j2 dest={{tomcat_base}}/conf/tomcat-users.xml
     notify: restart tomcat
 
-  - name: Context configure
-    template: src=templates/context.xml.host  dest=/opt/apache-tomcat-9.0.11/webapps/host-manager/META-INF
+  - name: Enable Host Manager Access
+    template: src=templates/context.xml.host  dest={{tomcat_base}}/webapps/host-manager/META-INF
     notify: restart tomcat
 
-  - name: Context configure
-    template: src=templates/context.xml.manager dest=/opt/apache-tomcat-9.0.11/webapps/manager/META-INF/context.xml
+  - name: Enable Manager Access
+    template: src=templates/context.xml.manager dest={{tomcat_base}}/webapps/manager/META-INF/context.xml
     notify: restart tomcat
 
-  - name: open tomcat port
-    firewalld: port=8080/tcp zone=public permanent=true state=enabled immediate=yes
+  - name: Enable tomcat port under firewall
+    firewalld: port={{tomcat_port}}/tcp zone=public permanent=true state=enabled immediate=yes
 
-  - name: create necessary logs
-    file: path=/opt/apache-tomcat-9.0.11/logs/{{item.domain_name}}_access_log.txt state=touch owner=tomcat group=tomcat mode=755
+  - name: Enable tomcat secure port under firewall
+    firewalld: port={{tomcat_ssl_port}}/tcp zone=public permanent=true state=enabled immediate=yes
+
+  - name: create necessary log files for virtualhosts
+    file: path={{tomcat_base}}/logs/{{item.domain_name}}_access_log.txt state=file owner=tomcat group=tomcat mode=755
     with_items: 
       - "{{ domains }}"
 
@@ -69,4 +78,3 @@
     service: 
       name: tomcat
       state: restarted
-    
