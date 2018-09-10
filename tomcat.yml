@@ -16,6 +16,9 @@
   - name: Make sure that we can connect to the machine
     ping:
 
+  - name: include extra prameters
+    include_vars: vars/tomcat-users-password.yml
+
   - name: Install java-1.8.0-openjdk
     yum: name=java-1.8.0-openjdk state=present
 
