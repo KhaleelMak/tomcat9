@@ -1,5 +1,6 @@
 ---
 - hosts: localhost
+  user: ansible
   become: yes
   become_method: sudo
   vars:
@@ -8,8 +9,8 @@
     tomcat_ssl_port: 8443
 
     domains:
-      - { domain_name: abc.com }
-      - { domain_name: xyz.com }
+      - { domain_name: abcapi }
+      - { domain_name: xyzapi }
 
   tasks:
     
@@ -30,7 +31,7 @@
     become: true
 
   - name: Download tomcat tar to /tmp dir
-    get_url: url=http://www-eu.apache.org/dist/tomcat/tomcat-9/v9.0.11/bin/apache-tomcat-9.0.11.tar.gz  dest=/tmp/apache-tomcat-9.0.11.tar.gz
+    get_url: url=http://mirrors.fibergrid.in/apache/tomcat/tomcat-9/v9.0.12/bin/apache-tomcat-9.0.12.tar.gz  dest=/tmp/apache-tomcat-9.0.11.tar.gz
 
   - name: setup systemd file for tomcat service
     template: src=files/tomcat.service  dest=/etc/systemd/system/tomcat.service mode=644 
@@ -67,7 +68,7 @@
     firewalld: port={{tomcat_ssl_port}}/tcp zone=public permanent=true state=enabled immediate=yes
 
   - name: create necessary log files for virtualhosts
-    file: path={{tomcat_base}}/logs/{{item.domain_name}}_access_log.txt state=file owner=tomcat group=tomcat mode=755
+    copy: content="" force=no dest={{tomcat_base}}/logs/{{item.domain_name}}_access_log.txt owner=tomcat group=tomcat mode=644
     with_items: 
       - "{{ domains }}"
 
